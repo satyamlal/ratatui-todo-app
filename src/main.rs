@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Layout},
     prelude::Stylize,
     style::Color,
-    widgets::{Block, BorderType, Paragraph, Widget},
+    widgets::{Block, BorderType, List, ListItem, Paragraph, Widget},
 };
 
 #[derive(Debug, Default)]
@@ -20,8 +20,19 @@ struct TodoItem {
 }
 
 fn main() -> Result<()> {
-    println!("Todo App using Ratatui crate!");
     let mut state = AppState::default();
+    state.items.push(TodoItem {
+        is_done: false,
+        description: String::from("Finish this application!"),
+    });
+    state.items.push(TodoItem {
+        is_done: true,
+        description: String::from("Go to gym!"),
+    });
+    state.items.push(TodoItem {
+        is_done: false,
+        description: String::from("Fix all the bugs!"),
+    });
     color_eyre::install()?;
 
     let terminal = ratatui::init();
@@ -53,10 +64,23 @@ fn render(frame: &mut Frame, app_state: &AppState) {
     let [border_area] = Layout::vertical([Constraint::Fill(1)])
         .margin(1)
         .areas(frame.area());
+
+    let [inner_area] = Layout::vertical([Constraint::Fill(1)])
+        .margin(3)
+        .areas(frame.area());
+
     Block::bordered()
         .border_type(BorderType::Rounded)
         .fg(Color::Yellow)
-        .bg(Color::DarkGray)
         .render(border_area, frame.buffer_mut());
-    Paragraph::new("Hello from Ratatui Todo App!").render(frame.area(), frame.buffer_mut());
+
+    List::new(
+        app_state
+            .items
+            .iter()
+            .map(|x| ListItem::from(x.description.clone())),
+    )
+    .render(inner_area, frame.buffer_mut());
+
+    // Paragraph::new("Hello from Ratatui Todo App!").render(frame.area(), frame.buffer_mut());
 }
