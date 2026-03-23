@@ -1,7 +1,7 @@
 use color_eyre::eyre::{Ok, Result};
 use ratatui::{
     DefaultTerminal, Frame,
-    crossterm::event::{self, Event},
+    crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Layout},
     prelude::Stylize,
     style::{Color, Style},
@@ -12,6 +12,7 @@ use ratatui::{
 struct AppState {
     items: Vec<TodoItem>,
     list_state: ListState,
+    is_add_new: bool,
 }
 
 #[derive(Debug, Default)]
@@ -26,13 +27,25 @@ fn main() -> Result<()> {
         is_done: false,
         description: String::from("Finish this application!"),
     });
+
     state.items.push(TodoItem {
-        is_done: true,
+        is_done: false,
         description: String::from("Go to gym!"),
     });
+
     state.items.push(TodoItem {
         is_done: false,
         description: String::from("Fix all the bugs!"),
+    });
+
+    state.items.push(TodoItem {
+        is_done: false,
+        description: String::from("Do the homework!"),
+    });
+
+    state.items.push(TodoItem {
+        is_done: false,
+        description: String::from("RUST everyday!"),
     });
     color_eyre::install()?;
 
@@ -49,21 +62,36 @@ fn run(mut terminal: DefaultTerminal, app_state: &mut AppState) -> Result<()> {
 
         //Input handling
         if let Event::Key(key) = event::read()? {
-            match key.code {
-                event::KeyCode::Esc => {
-                    break;
-                }
-                event::KeyCode::Char(char) => match char {
-                    'D' => {
-                        if let Some(index) = app_state.list_state.selected() {
-                            app_state.items.remove(index);
-                        };
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    event::KeyCode::Esc => {
+                        break;
                     }
-                    'k' => app_state.list_state.select_previous(),
-                    'j' => app_state.list_state.select_next(),
+                    event::KeyCode::Char(char) => match char {
+                        // 'A' => {
+                        //     app_state.is_add_new = true;
+                        // }
+                        'D' => {
+                            if let Some(index) = app_state.list_state.selected() {
+                                app_state.items.remove(index);
+                            };
+                        }
+                        'k' => {
+                            let current = app_state.list_state.selected().unwrap_or(0);
+                            if current > 0 {
+                                app_state.list_state.select(Some(current - 1));
+                            }
+                        }
+                        'j' => {
+                            let current = app_state.list_state.selected().unwrap_or(0);
+                            if current < app_state.items.len().saturating_sub(1) {
+                                app_state.list_state.select(Some(current + 1));
+                            }
+                        }
+                        _ => {}
+                    },
                     _ => {}
-                },
-                _ => {}
+                }
             }
         };
     }
