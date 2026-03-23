@@ -2,12 +2,13 @@ use color_eyre::eyre::{Ok, Result};
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyEvent, KeyEventKind},
-    layout::{Alignment, Constraint, Layout},
+    layout::{Constraint, Layout},
     prelude::Stylize,
     style::{Color, Style},
     text::Line,
     widgets::{Block, BorderType, List, ListItem, ListState, Padding, Paragraph, Widget},
 };
+use std::time::Instant;
 
 #[derive(Debug, Default)]
 struct AppState {
@@ -15,6 +16,9 @@ struct AppState {
     list_state: ListState,
     is_add_new: bool,
     input_value: String,
+    error_message: Option<String>,
+    error_time: Option<Instant>,
+    del_count: i32,
 }
 
 #[derive(Debug, Default)]
@@ -125,8 +129,27 @@ fn handle_key(key: KeyEvent, app_state: &mut AppState) -> bool {
             }
             'D' => {
                 if let Some(index) = app_state.list_state.selected() {
-                    app_state.items.remove(index);
-                };
+                    if app_state.items[index].is_done {
+                        app_state.items.remove(index);
+                        app_state.del_count = 0;
+                    } else {
+                        app_state.del_count += 1;
+
+                        let remaining = 3 - app_state.del_count;
+
+                        if app_state.del_count >= 3 {
+                            app_state.items.remove(index);
+                            app_state.del_count = 0;
+                            app_state.error_message = Some(format!("Task [DELETED] Successfully!"));
+                        } else {
+                            app_state.error_message = Some(format!(
+                                "[WARNING]: Complete task first! Press D {} more time(s) to force delete.",
+                                remaining
+                            ));
+                            app_state.error_time = Some(Instant::now());
+                        }
+                    }
+                }
             }
             'j' => match app_state.list_state.selected() {
                 None => app_state.list_state.select(Some(0)),
@@ -193,5 +216,26 @@ fn render(frame: &mut Frame, app_state: &mut AppState) {
         )
         .highlight_style(Style::default().fg(Color::Green));
         frame.render_stateful_widget(list, inner_area, &mut app_state.list_state);
+    }
+
+    if let Some(time) = app_state.error_time {
+        if time.elapsed().as_secs() >= 2 {
+            app_state.error_message = None;
+            app_state.error_time = None;
+        }
+    }
+
+    if let Some(msg) = &app_state.error_message {
+        let [_, msg_area] =
+            Layout::vertical([Constraint::Fill(1), Constraint::Length(3)]).areas(frame.area());
+
+        Paragraph::new(msg.as_str())
+            .fg(Color::Red)
+            .block(
+                Block::bordered()
+                    .fg(Color::Red)
+                    .border_type(BorderType::Rounded),
+            )
+            .render(msg_area, frame.buffer_mut())
     }
 }
