@@ -2,9 +2,10 @@ use color_eyre::eyre::{Ok, Result};
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyEvent, KeyEventKind},
-    layout::{Constraint, Layout},
+    layout::{Alignment, Constraint, Layout},
     prelude::Stylize,
     style::{Color, Style},
+    text::Line,
     widgets::{Block, BorderType, List, ListItem, ListState, Padding, Paragraph, Widget},
 };
 
@@ -29,27 +30,27 @@ fn main() -> Result<()> {
 
     state.items.push(TodoItem {
         is_done: false,
-        description: String::from("Finish this application!"),
+        description: String::from("> Finish this application!"),
     });
 
     state.items.push(TodoItem {
         is_done: false,
-        description: String::from("Go to gym!"),
+        description: String::from("> Go to gym!"),
     });
 
     state.items.push(TodoItem {
         is_done: false,
-        description: String::from("Fix all the bugs!"),
+        description: String::from("> Fix all the bugs!"),
     });
 
     state.items.push(TodoItem {
         is_done: false,
-        description: String::from("Do the homework!"),
+        description: String::from("> Do the homework!"),
     });
 
     state.items.push(TodoItem {
         is_done: false,
-        description: String::from("RUST everyday!"),
+        description: String::from("> RUST everyday!"),
     });
     color_eyre::install()?;
 
@@ -92,7 +93,7 @@ fn handle_add_new(key: KeyEvent, app_state: &mut AppState) -> bool {
             if !app_state.input_value.is_empty() {
                 app_state.items.push(TodoItem {
                     is_done: false,
-                    description: app_state.input_value.clone(),
+                    description: "> ".to_string() + app_state.input_value.as_str(),
                 });
             }
             app_state.input_value.clear();
@@ -161,27 +162,36 @@ fn render(frame: &mut Frame, app_state: &mut AppState) {
 
     Block::bordered()
         .border_type(BorderType::Rounded)
+        .title(Line::from(" 📝 Todo App ").centered())
         .fg(Color::Yellow)
         .render(border_area, frame.buffer_mut());
 
-    let list = List::new(
-        app_state
-            .items
-            .iter()
-            .map(|x| ListItem::from(x.description.as_str())),
-    )
-    .highlight_symbol("> ")
-    .highlight_style(Style::default().fg(Color::Green));
-    frame.render_stateful_widget(list, inner_area, &mut app_state.list_state);
-
     if app_state.is_add_new {
-        Paragraph::new(app_state.input_value.as_str())
+        let [label_area, input_area] =
+            Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
+                .margin(2)
+                .areas(frame.area());
+
+        Paragraph::new("Add new item here: ")
+            .fg(Color::White)
+            .render(label_area, frame.buffer_mut());
+
+        Paragraph::new("> ".to_string() + app_state.input_value.as_str())
             .block(
                 Block::bordered()
                     .fg(Color::Green)
                     .padding(Padding::uniform(1))
                     .border_type(BorderType::Rounded),
             )
-            .render(frame.area(), frame.buffer_mut());
+            .render(input_area, frame.buffer_mut());
+    } else {
+        let list = List::new(
+            app_state
+                .items
+                .iter()
+                .map(|x| ListItem::from(x.description.as_str())),
+        )
+        .highlight_style(Style::default().fg(Color::Green));
+        frame.render_stateful_widget(list, inner_area, &mut app_state.list_state);
     }
 }
